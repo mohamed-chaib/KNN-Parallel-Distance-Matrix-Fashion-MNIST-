@@ -1,6 +1,7 @@
 import numpy as np
 import time
 import ctypes
+import os
 from sklearn.metrics import accuracy_score
 
 
@@ -14,19 +15,19 @@ lib = ctypes.CDLL("./libknn.so")
 # Define C function signature
 # ================================
 lib.knn_predict.argtypes = [
-    ctypes.POINTER(ctypes.c_double),  # X_test
-    ctypes.c_int,                      # n_test
-    ctypes.POINTER(ctypes.c_double),   # X_train
-    ctypes.POINTER(ctypes.c_int),      # y_train
-    ctypes.c_int,                      # n_train
-    ctypes.c_int,                      # dim
-    ctypes.c_int,                      # k
-    ctypes.POINTER(ctypes.c_int)       # predictions
+    ctypes.POINTER(ctypes.c_double),
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_double),
+    ctypes.POINTER(ctypes.c_int),
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int)
 ]
 
 
 # ================================
-# Python wrapper for C KNN
+# Python wrapper
 # ================================
 def predict_all(X_test, X_train, y_train, k=3):
     X_test = np.ascontiguousarray(X_test, dtype=np.float64)
@@ -53,7 +54,7 @@ def predict_all(X_test, X_train, y_train, k=3):
 
 
 # ================================
-# Main execution
+# Main
 # ================================
 def main():
     print("Loading processed dataset...")
@@ -65,7 +66,7 @@ def main():
     X_test = data["X_test"]
     y_test = data["y_test"]
 
-    # Small subset for testing
+    # Small subset
     X_train = X_train[:5000]
     y_train = y_train[:5000]
     X_test = X_test[:500]
@@ -75,22 +76,34 @@ def main():
     print("Train:", X_train.shape)
     print("Test:", X_test.shape)
 
-    print("\nRunning C + OpenMP KNN...")
+    print("\nRunning experiments with different thread counts...\n")
 
-    start = time.time()
+    thread_list = [1, 2, 4, 8,16]  
+    baseline_time = None
 
-    y_pred = predict_all(X_test, X_train, y_train, k=3)
+    for threads in thread_list:
+        os.environ["OMP_NUM_THREADS"] = str(threads)
 
-    end = time.time()
+        print(f"\n=== Threads: {threads} ===")
 
-    acc = accuracy_score(y_test, y_pred)
+        start = time.time()
 
-    # ================================
-    # Results
-    # ================================
-    print("\n--- RESULTS ---")
-    print("Accuracy:", acc)
-    print("Time:", end - start, "seconds")
+        y_pred = predict_all(X_test, X_train, y_train, k=3)
+
+        end = time.time()
+
+        elapsed = end - start
+        acc = accuracy_score(y_test, y_pred)
+
+        if threads == 1:
+            baseline_time = elapsed
+            speedup = 1.0
+        else:
+            speedup = baseline_time / elapsed
+
+        print(f"Accuracy : {acc:.4f}")
+        print(f"Time     : {elapsed:.4f} seconds")
+        print(f"Speedup  : {speedup:.2f}x")
 
 
 if __name__ == "__main__":
