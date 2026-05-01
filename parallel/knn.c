@@ -18,7 +18,6 @@ int compare(const void *a, const void *b) {
 
 // Compute distances
 void compute_distances(double *x, double *X_train, double *distances, int n_train, int dim) {
-    # pragma omp parallel for 
     for (int i = 0; i < n_train; i++) {
         double sum = 0.0;
         for (int j = 0; j < dim; j++) {
@@ -72,7 +71,7 @@ void predict_all_parallel(double *X_test, int n_test,
                  int n_train, int dim, int k,
                  int *predictions) {
 
-    #pragma omp parallel for
+    #pragma omp parallel for schedule(static)
     for (int i = 0; i < n_test; i++) {
 
         predictions[i] = predict_one(
@@ -84,14 +83,17 @@ void predict_all_parallel(double *X_test, int n_test,
             k
         );
 
-        // Avoid race condition on printf
-        if (i % 50 == 0) {
-            #pragma omp critical
-            {
-                printf("Processed %d samples...\n", i);
-            }
-        }
     }
+}
+
+void knn_set_num_threads(int num_threads) {
+    if (num_threads > 0) {
+        omp_set_num_threads(num_threads);
+    }
+}
+
+int knn_get_max_threads(void) {
+    return omp_get_max_threads();
 }
 
 void knn_predict(double *X_test, int n_test,

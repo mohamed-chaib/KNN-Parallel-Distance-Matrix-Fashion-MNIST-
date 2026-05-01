@@ -1,7 +1,6 @@
 import numpy as np
 import time
 import ctypes
-import os
 from sklearn.metrics import accuracy_score
 
 
@@ -24,6 +23,11 @@ lib.knn_predict.argtypes = [
     ctypes.c_int,
     ctypes.POINTER(ctypes.c_int)
 ]
+
+lib.knn_set_num_threads.argtypes = [ctypes.c_int]
+lib.knn_set_num_threads.restype = None
+lib.knn_get_max_threads.argtypes = []
+lib.knn_get_max_threads.restype = ctypes.c_int
 
 
 # ================================
@@ -59,7 +63,7 @@ def predict_all(X_test, X_train, y_train, k=3):
 def main():
     print("Loading processed dataset...")
 
-    data = np.load("../data/processed/fashion_mnist_processed.npz")
+    data = np.load("../data/data/processed/fashion_mnist_processed.npz")
 
     X_train = data["X_train"]
     y_train = data["y_train"]
@@ -82,9 +86,9 @@ def main():
     baseline_time = None
 
     for threads in thread_list:
-        os.environ["OMP_NUM_THREADS"] = str(threads)
+        lib.knn_set_num_threads(threads)
 
-        print(f"\n=== Threads: {threads} ===")
+        print(f"\n=== Threads: {lib.knn_get_max_threads()} ===")
 
         start = time.time()
 
