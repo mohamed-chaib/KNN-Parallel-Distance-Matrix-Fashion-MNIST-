@@ -1,1 +1,7 @@
 data/processed/
+data/data/
+*.npz
+*.so
+__pycache__/
+.DS_Store
+data/
